@@ -1,0 +1,12 @@
+services:
+    awaresoft.breadcrumb.block.breadcrumb:
+        class: Awaresoft\BreadcrumbBundle\Block\BreadcrumbBlock
+        tags:
+            - { name: sonata.breadcrumb }
+            - { name: sonata.block }
+        arguments:
+            - awaresoft.breadcrumb.block.breadcrumb
+            - @templating
+            - @knp_menu.menu_provider
+            - @knp_menu.factory
+            - @service_container
