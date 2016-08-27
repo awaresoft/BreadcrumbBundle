@@ -70,13 +70,13 @@ class Builder extends ContainerAware
     protected function build()
     {
         $this->menu = $this->factory->createItem('root');
-        $availableClasses = $this->container->getParameter('awaresoft.breadcrumb.options')['classes'];
+        $classes = $this->container->getParameter('awaresoft.breadcrumb.options')['classes'];
 
-        if (!array_key_exists($this->context, $availableClasses)) {
+        if (!array_key_exists($this->context, $classes)) {
             throw new ContextNotAvailableException($this->context);
         }
 
-        $contextClass = new $availableClasses[$this->context]($this->container);
+        $contextClass = new $classes[$this->context]($this->container);
         $breadcrumbItems = $contextClass->create();
         $baseUrl = $this->getRequest()->getBaseUrl();
 

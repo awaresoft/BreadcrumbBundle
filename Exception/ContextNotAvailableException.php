@@ -16,16 +16,17 @@ class ContextNotAvailableException extends \Exception
      */
     protected $context;
 
+    /**
+     * ContextNotAvailableException constructor.
+     *
+     * @param string $context
+     * @param int $code
+     * @param \Exception|null $previous
+     */
     public function __construct($context, $code = 500, \Exception $previous = null)
     {
-        $this->context = $context;
         $message = sprintf(self::MESSAGE, $context);
 
         parent::__construct($message, $code, $previous);
-    }
-
-    public function getContext()
-    {
-        return $this->context;
     }
 }
