@@ -6,6 +6,7 @@ use Awaresoft\Sonata\PageBundle\Entity\Page;
 use Awaresoft\Sonata\PageBundle\Entity\PageRepository;
 use Doctrine\ORM\EntityManager;
 use Sonata\PageBundle\Model\PageInterface;
+use Sonata\PageBundle\Model\SiteInterface;
 use Symfony\Cmf\Component\Routing\ChainRouter;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -51,6 +52,11 @@ abstract class AbstractBreadcrumb implements BreadcrumbInterface
     protected $translator;
 
     /**
+     * @var SiteInterface
+     */
+    protected $site;
+
+    /**
      * AbstractBreadcrumb constructor.
      *
      * @param ContainerInterface $container
@@ -63,6 +69,7 @@ abstract class AbstractBreadcrumb implements BreadcrumbInterface
         $this->router = $container->get('router');
         $this->translator = $container->get('translator');
         $this->container = $container;
+        $this->site = $container->get('sonata.page.site.selector')->retrieve();
 
         if (!$this->page) {
             $cmsPage = $this->container->get('sonata.page.cms_manager_selector')->retrieve();
