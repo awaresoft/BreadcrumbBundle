@@ -2,6 +2,7 @@
 
 namespace Awaresoft\BreadcrumbBundle\Block;
 
+use Awaresoft\BreadcrumbBundle\Breadcrumb\BreadcrumbItem;
 use Awaresoft\Sonata\PageBundle\Entity\PageRepository;
 use Doctrine\ORM\EntityManager;
 use Knp\Menu\MenuItem;
@@ -28,7 +29,7 @@ class BreadcrumbBlock extends MenuBlockService
     /**
      * @var array referrer to breadcrumbs menu
      */
-    const MENUS = array('AwaresoftBreadcrumbBundle:BlockBuilder:breadcrumb' => 'dynamic');
+    const MENUS = ['AwaresoftBreadcrumbBundle:BlockBuilder:breadcrumb' => 'dynamic'];
 
     /**
      * @var string
@@ -92,11 +93,11 @@ class BreadcrumbBlock extends MenuBlockService
     {
         parent::configureSettings($resolver);
 
-        $resolver->setDefaults(array(
+        $resolver->setDefaults([
             'template' => 'AwaresoftBreadcrumbBundle:Block:block_breadcrumb.html.twig',
             'include_homepage_link' => true,
-            'request' => array(),
-        ));
+            'request' => [],
+        ]);
     }
 
     /**
@@ -167,7 +168,7 @@ class BreadcrumbBlock extends MenuBlockService
         $this->setExtendedRequest($blockContext);
         $settings = $blockContext->getSettings();
         $menu = $this->factory->createItem('breadcrumb');
-        $baseUrl = $this->getRequest()->getBaseUrl().$this->container->get('sonata.page.site.selector')
+        $baseUrl = $this->getRequest()->getBaseUrl() . $this->container->get('sonata.page.site.selector')
                 ->getRequestContext()
                 ->getBaseUrl();
 
@@ -192,7 +193,7 @@ class BreadcrumbBlock extends MenuBlockService
 
         if ($settings['include_homepage_link']) {
             $menu->addChild($this->container->get('translator')->trans('breadcrumb.homepage'),
-                array('uri' => $baseUrl));
+                ['uri' => $baseUrl]);
         }
 
         return $menu;
@@ -228,6 +229,11 @@ class BreadcrumbBlock extends MenuBlockService
         $this->menu = $this->getRootMenu($blockContext);
         $contextClass = new $this->context($this->container);
         $breadcrumbItems = $contextClass->create();
+
+        if (!is_array($breadcrumbItems)) {
+            return $this->menu;
+        }
+
         $contextClass->cleanLastItem($breadcrumbItems);
 
         foreach ($breadcrumbItems as $breadcrumb) {
@@ -246,12 +252,12 @@ class BreadcrumbBlock extends MenuBlockService
      */
     protected function addChild($item)
     {
-        return $this->menu->addChild($item->getName(), array(
+        return $this->menu->addChild($item->getName(), [
             'uri' => $item->getUrl(),
-            'extras' => array(
+            'extras' => [
                 'object' => $item,
-            ),
-        ));
+            ],
+        ]);
     }
 
     /**
