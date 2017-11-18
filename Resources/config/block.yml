@@ -6,7 +6,7 @@ services:
             - { name: sonata.block }
         arguments:
             - awaresoft.breadcrumb.block.breadcrumb
-            - @templating
-            - @knp_menu.menu_provider
-            - @knp_menu.factory
-            - @service_container
+            - "@templating"
+            - "@knp_menu.menu_provider"
+            - "@knp_menu.factory"
+            - "@service_container"
