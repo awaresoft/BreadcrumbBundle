@@ -2,12 +2,12 @@
 
 namespace Awaresoft\BreadcrumbBundle\Menu;
 
-use Symfony\Component\DependencyInjection\ContainerAware;
 use Knp\Menu\FactoryInterface;
 use Knp\Menu\ItemInterface;
 use Awaresoft\BreadcrumbBundle\Exception\ContextNotAvailableException;
 use Awaresoft\BreadcrumbBundle\Exception\ContextNotFoundException;
 use Awaresoft\BreadcrumbBundle\Breadcrumb\BreadcrumbItem;
+use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 
 /**
  * Class Builder
@@ -15,8 +15,10 @@ use Awaresoft\BreadcrumbBundle\Breadcrumb\BreadcrumbItem;
  *
  * @author Bartosz Malec <b.malec@awaresoft.pl>
  */
-class Builder extends ContainerAware
+class Builder
 {
+    use ContainerAwareTrait;
+
     /**
      * @var ItemInterface
      */

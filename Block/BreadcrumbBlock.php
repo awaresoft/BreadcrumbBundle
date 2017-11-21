@@ -2,10 +2,13 @@
 
 namespace Awaresoft\BreadcrumbBundle\Block;
 
+use Awaresoft\BreadcrumbBundle\Breadcrumb\AbstractBreadcrumb;
 use Awaresoft\BreadcrumbBundle\Breadcrumb\BreadcrumbItem;
+use Awaresoft\BreadcrumbBundle\Exception\WrongPositionException;
 use Awaresoft\Sonata\PageBundle\Entity\PageRepository;
 use Doctrine\ORM\EntityManager;
 use Knp\Menu\MenuItem;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Templating\EngineInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -25,16 +28,9 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
  */
 class BreadcrumbBlock extends MenuBlockService
 {
-
-    /**
-     * @var array referrer to breadcrumbs menu
-     */
     const MENUS = ['AwaresoftBreadcrumbBundle:BlockBuilder:breadcrumb' => 'dynamic'];
-
-    /**
-     * @var string
-     */
     const DEFAULT_CLASS = 'breadcrumb';
+    const DEFAULT_POSITION = 'default';
 
     /**
      * @var string
@@ -62,6 +58,16 @@ class BreadcrumbBlock extends MenuBlockService
     protected $em;
 
     /**
+     * @var LoggerInterface
+     */
+    protected $logger;
+
+    /**
+     * @var Request
+     */
+    protected $request;
+
+    /**
      * @param string $name
      * @param EngineInterface $templating
      * @param MenuProviderInterface $menuProvider
@@ -72,6 +78,8 @@ class BreadcrumbBlock extends MenuBlockService
     {
         $this->container = $container;
         $this->em = $this->container->get('doctrine.orm.entity_manager');
+        $this->logger = $container->get('logger');
+        $this->request = $container->get('request_stack')->getCurrentRequest();
         $this->factory = $factory;
         $this->context = null;
 
@@ -83,6 +91,10 @@ class BreadcrumbBlock extends MenuBlockService
      */
     public function getName()
     {
+        if (isset($this->context['controller'])) {
+            return sprintf("Breadcrumb %s", $this->context['controller']);
+        }
+
         return sprintf("Breadcrumb %s", $this->context);
     }
 
@@ -96,6 +108,7 @@ class BreadcrumbBlock extends MenuBlockService
         $resolver->setDefaults([
             'template' => 'AwaresoftBreadcrumbBundle:Block:block_breadcrumb.html.twig',
             'include_homepage_link' => true,
+            'position' => 'default',
             'request' => [],
         ]);
     }
@@ -128,26 +141,25 @@ class BreadcrumbBlock extends MenuBlockService
      * @throws ContextNotAvailableException
      * @throws ContextNotFoundException
      */
-    protected function checkContext()
+    protected function prepareContext()
     {
-        $request = $this->container->get('request');
-        $page = $request->attributes->get('page');
+        $page = $this->request->attributes->get('page');
         $availableRoutes = $this->container->getParameter('awaresoft.breadcrumb.options')['routes'];
         $hiddenOnRoutes = $this->container->getParameter('awaresoft.breadcrumb.options')['hidden_on_routes'];
 
-        if (array_key_exists($request->get('_route'), $hiddenOnRoutes)) {
+        if (array_key_exists($this->request->get('_route'), $hiddenOnRoutes)) {
             throw new ContextNotAvailableException('page_slug');
         }
 
-        if (!$availableRoutes['page_slug']) {
-            throw new ContextNotFoundException('page_slug');
-        }
-
         if ($page) {
+            if (!$availableRoutes['page_slug']) {
+                throw new ContextNotFoundException('page_slug');
+            }
+
             return $availableRoutes['page_slug'];
         }
 
-        $route = $request->get('_route');
+        $route = $this->request->get('_route');
 
         if (array_key_exists($route, $availableRoutes)) {
             return $availableRoutes[$route];
@@ -168,9 +180,13 @@ class BreadcrumbBlock extends MenuBlockService
         $this->setExtendedRequest($blockContext);
         $settings = $blockContext->getSettings();
         $menu = $this->factory->createItem('breadcrumb');
-        $baseUrl = $this->getRequest()->getBaseUrl() . $this->container->get('sonata.page.site.selector')
+        $baseUrl = sprintf(
+            '%s%s',
+            $this->request->getBaseUrl(),
+            $this->container->get('sonata.page.site.selector')
                 ->getRequestContext()
-                ->getBaseUrl();
+                ->getBaseUrl()
+        );
 
         if (!$baseUrl) {
             $baseUrl = '/';
@@ -192,8 +208,10 @@ class BreadcrumbBlock extends MenuBlockService
         }
 
         if ($settings['include_homepage_link']) {
-            $menu->addChild($this->container->get('translator')->trans('breadcrumb.homepage'),
-                ['uri' => $baseUrl]);
+            $menu->addChild(
+                $this->container->get('translator')->trans('breadcrumb.homepage'),
+                ['uri' => $baseUrl]
+            );
         }
 
         return $menu;
@@ -206,12 +224,11 @@ class BreadcrumbBlock extends MenuBlockService
      */
     protected function setExtendedRequest(BlockContextInterface $blockContext)
     {
-        $request = $this->container->get('request');
         $extendedRequestParams = $blockContext->getBlock()->getSetting('request');
 
         if (count($extendedRequestParams) > 0) {
             foreach ($extendedRequestParams as $key => $param) {
-                $request->attributes->set($key, $param);
+                $this->request->attributes->set($key, $param);
             }
         }
     }
@@ -221,26 +238,51 @@ class BreadcrumbBlock extends MenuBlockService
      *
      * @param BlockContextInterface $blockContext
      *
-     * @return ItemInterface|string
+     * @return ItemInterface|MenuItem
+     * @throws WrongPositionException
      */
     protected function getMenu(BlockContextInterface $blockContext)
     {
-        $this->context = $this->checkContext();
-        $this->menu = $this->getRootMenu($blockContext);
-        $contextClass = new $this->context($this->container);
-        $breadcrumbItems = $contextClass->create();
+        /**
+         * @var $contextClass AbstractBreadcrumb
+         */
 
-        if (!is_array($breadcrumbItems)) {
+        try {
+            $this->context = $this->prepareContext();
+
+            // Overwrite template
+            if (isset($this->context['template'])) {
+                $blockContext->setSetting('menu_template', $this->context['template']);
+            }
+
+            // Check if position is set and breadcrumb should be rendered
+            if (isset($this->context['position'])) {
+                if ($blockContext->getSetting('position') !== $this->context['position']) {
+                    throw new WrongPositionException('page_slug');
+                }
+            }
+
+            // Prepare breadcrumb
+            $this->menu = $this->getRootMenu($blockContext);
+            $contextClass = new $this->context['controller']($this->container);
+            $breadcrumbItems = $contextClass->create();
+
+            if (!is_array($breadcrumbItems)) {
+                return $this->menu;
+            }
+
+            $contextClass->cleanLastItem($breadcrumbItems);
+
+            foreach ($breadcrumbItems as $breadcrumb) {
+                $this->addChild($breadcrumb);
+            }
+
             return $this->menu;
+        } catch (\Exception $e) {
+            $this->logger->debug($e->getMessage());
+
+            return null;
         }
-
-        $contextClass->cleanLastItem($breadcrumbItems);
-
-        foreach ($breadcrumbItems as $breadcrumb) {
-            $this->addChild($breadcrumb);
-        }
-
-        return $this->menu;
     }
 
     /**
@@ -248,7 +290,7 @@ class BreadcrumbBlock extends MenuBlockService
      *
      * @param BreadcrumbItem $item
      *
-     * @return MenuItem
+     * @return ItemInterface
      */
     protected function addChild($item)
     {
@@ -258,14 +300,6 @@ class BreadcrumbBlock extends MenuBlockService
                 'object' => $item,
             ],
         ]);
-    }
-
-    /**
-     * @return Request
-     */
-    protected function getRequest()
-    {
-        return $this->container->get('request');
     }
 
     /**

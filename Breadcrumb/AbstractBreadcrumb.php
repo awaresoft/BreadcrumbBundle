@@ -64,7 +64,7 @@ abstract class AbstractBreadcrumb implements BreadcrumbInterface
     public function __construct(ContainerInterface $container)
     {
         $this->em = $container->get('doctrine.orm.entity_manager');
-        $this->request = $container->get('request');
+        $this->request = $container->get('request_stack')->getCurrentRequest();
         $this->page = $this->request->attributes->get('page');
         $this->router = $container->get('router');
         $this->translator = $container->get('translator');
