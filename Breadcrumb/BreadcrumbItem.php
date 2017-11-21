@@ -83,5 +83,4 @@ class BreadcrumbItem
     {
         $this->active = $active;
     }
-
 }
