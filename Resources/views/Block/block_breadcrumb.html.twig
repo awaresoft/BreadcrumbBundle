@@ -3,6 +3,8 @@
 
 {% block block %}
     {% if menu %}
-        {{ knp_menu_render(menu, menu_options) }}
+        {% block breadcrumb_menu %}
+            {{ knp_menu_render(menu, menu_options) }}
+        {% endblock %}
     {% endif %}
 {% endblock %}
