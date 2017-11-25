@@ -4,10 +4,10 @@
     "description": "Symfony Awaresoft BreadcrumbBundle with Sonata libraries",
     "require": {
         "php": ">= 7",
-        "symfony/symfony": "2.*",
+        "symfony/symfony": ">= 2.7",
         "knplabs/knp-menu-bundle": "2.*",
         "sonata-project/block-bundle": "3.*"
     },"autoload": {
-    "psr-4": { "Awaresoft\\BreadcrumbBundle\\": "" }
-}
+        "psr-4": { "Awaresoft\\BreadcrumbBundle\\": "" }
+    }
 }
