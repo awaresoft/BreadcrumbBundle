@@ -7,7 +7,7 @@ namespace Awaresoft\BreadcrumbBundle\Exception;
  *
  * @author Bartosz Malec <b.malec@awaresoft.pl>
  */
-class PageNotFoundException extends \Exception
+class PageNotFoundException extends BaseBreadcrumbException
 {
     const MESSAGE = 'Selected page %s does not support breadcrumbs. Please add dedicated breadcrumb type for this page.';
 

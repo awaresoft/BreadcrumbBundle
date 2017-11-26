@@ -39,7 +39,12 @@ abstract class AbstractBreadcrumb implements BreadcrumbInterface
     /**
      * @var PageInterface
      */
-    protected $page;
+    protected $cmsPage;
+
+    /**
+     * @var object|\Sonata\PageBundle\CmsManager\CmsManagerInterface|\Sonata\PageBundle\CmsManager\CmsPageManager|\Sonata\PageBundle\CmsManager\CmsSnapshotManager
+     */
+    protected $cmsManager;
 
     /**
      * @var ContainerInterface
@@ -65,24 +70,12 @@ abstract class AbstractBreadcrumb implements BreadcrumbInterface
     {
         $this->em = $container->get('doctrine.orm.entity_manager');
         $this->request = $container->get('request_stack')->getCurrentRequest();
-        $this->page = $this->request->attributes->get('page');
         $this->router = $container->get('router');
         $this->translator = $container->get('translator');
         $this->container = $container;
         $this->site = $container->get('sonata.page.site.selector')->retrieve();
-
-        if (!$this->page) {
-            $cmsPage = $this->container->get('sonata.page.cms_manager_selector')->retrieve();
-            $this->page = $cmsPage->getCurrentPage();
-        }
-    }
-
-    /**
-     * @param PageInterface $page
-     */
-    public function setPage(PageInterface $page)
-    {
-        $this->page = $page;
+        $this->cmsManager = $this->container->get('sonata.page.cms_manager_selector')->retrieve();
+        $this->cmsPage = $this->cmsManager->getCurrentPage();
     }
 
     /**
@@ -121,15 +114,15 @@ abstract class AbstractBreadcrumb implements BreadcrumbInterface
      */
     protected function getIndexParent($indexRoute = null)
     {
-        if (!$this->page) {
+        if (!$this->cmsPage) {
             return null;
         }
 
         if (!$indexRoute) {
-            $route = $this->page->getRouteName();
+            $route = $this->cmsPage->getRouteName();
             $routeComponents = explode('_', $route);
             $lastRouteComponent = end($routeComponents);
-            $indexRoute = str_replace('_'.$lastRouteComponent, '_index', $route);
+            $indexRoute = str_replace('_' . $lastRouteComponent, '_index', $route);
         }
 
         return $this->container->get('awaresoft.page.manager.page')->getMultisitePageByRoute($indexRoute);
@@ -142,10 +135,10 @@ abstract class AbstractBreadcrumb implements BreadcrumbInterface
      *
      * @return array
      */
-    protected function prepareParentsBreadcrumb(PageInterface $page = null)
+    protected function prepareParentBreadcrumbs(PageInterface $page = null)
     {
         if (!$page) {
-            $page = $this->page;
+            $page = $this->cmsPage;
         }
 
         $baseUrl = $this->request->getBaseUrl();
@@ -156,7 +149,8 @@ abstract class AbstractBreadcrumb implements BreadcrumbInterface
         for ($i = $parentsCount - 1; $i >= 0; $i--) {
             $item = new BreadcrumbItem();
             $item->setName($parents[$i]->getName());
-            $item->setUrl($baseUrl.$parents[$i]->getUrl());
+            $item->setUrl($baseUrl . $parents[$i]->getUrl());
+            $item->setActive(false);
 
             $breadcrumbs[] = $item;
         }
@@ -165,7 +159,30 @@ abstract class AbstractBreadcrumb implements BreadcrumbInterface
     }
 
     /**
-     * @param Page   $page
+     * Prepare breadcrumb for page
+     *
+     * @param PageInterface $page
+     * @param bool $isLastActive
+     *
+     * @return array
+     */
+    protected function preparePageBreadcrumbs(PageInterface $page = null, $isLastActive = false)
+    {
+        $baseUrl = $this->request->getBaseUrl();
+        $breadcrumbs = $this->prepareParentBreadcrumbs($page);
+
+        $item = new BreadcrumbItem();
+        $item->setName($this->cmsPage->getName());
+        $item->setUrl($baseUrl . $this->cmsPage->getUrl());
+        $item->setActive($isLastActive);
+
+        $breadcrumbs[] = $item;
+
+        return $breadcrumbs;
+    }
+
+    /**
+     * @param Page $page
      * @param Page[] $parents
      *
      * @return Page[]

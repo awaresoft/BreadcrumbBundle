@@ -7,7 +7,7 @@ namespace Awaresoft\BreadcrumbBundle\Exception;
  *
  * @author Bartosz Malec <b.malec@awaresoft.pl>
  */
-class ContextNotFoundException extends \Exception
+class ContextNotFoundException extends BaseBreadcrumbException
 {
     const MESSAGE = 'Context %s not found. Please check breadcrumbs configuration.';
 

@@ -4,11 +4,13 @@ namespace Awaresoft\BreadcrumbBundle\Block;
 
 use Awaresoft\BreadcrumbBundle\Breadcrumb\AbstractBreadcrumb;
 use Awaresoft\BreadcrumbBundle\Breadcrumb\BreadcrumbItem;
+use Awaresoft\BreadcrumbBundle\Exception\BaseBreadcrumbException;
 use Awaresoft\BreadcrumbBundle\Exception\WrongPositionException;
 use Awaresoft\Sonata\PageBundle\Entity\PageRepository;
 use Doctrine\ORM\EntityManager;
 use Knp\Menu\MenuItem;
 use Psr\Log\LoggerInterface;
+use Sonata\PageBundle\Model\PageInterface;
 use Symfony\Bundle\FrameworkBundle\Templating\EngineInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -68,6 +70,11 @@ class BreadcrumbBlock extends MenuBlockService
     protected $request;
 
     /**
+     * @var PageInterface
+     */
+    protected $cmsPage;
+
+    /**
      * @param string $name
      * @param EngineInterface $templating
      * @param MenuProviderInterface $menuProvider
@@ -82,6 +89,7 @@ class BreadcrumbBlock extends MenuBlockService
         $this->request = $container->get('request_stack')->getCurrentRequest();
         $this->factory = $factory;
         $this->context = null;
+        $this->cmsPage = $this->container->get('sonata.page.cms_manager_selector')->retrieve()->getCurrentPage();
 
         parent::__construct($name, $templating, $menuProvider, self::MENUS);
     }
@@ -143,7 +151,6 @@ class BreadcrumbBlock extends MenuBlockService
      */
     protected function prepareContext()
     {
-        $page = $this->request->attributes->get('page');
         $availableRoutes = $this->container->getParameter('awaresoft.breadcrumb.options')['routes'];
         $hiddenOnRoutes = $this->container->getParameter('awaresoft.breadcrumb.options')['hidden_on_routes'];
 
@@ -151,7 +158,7 @@ class BreadcrumbBlock extends MenuBlockService
             throw new ContextNotAvailableException('page_slug');
         }
 
-        if ($page) {
+        if ($this->cmsPage && $this->cmsPage->getRouteName() === 'page_slug') {
             if (!$availableRoutes['page_slug']) {
                 throw new ContextNotFoundException('page_slug');
             }
@@ -278,7 +285,7 @@ class BreadcrumbBlock extends MenuBlockService
             }
 
             return $this->menu;
-        } catch (\Exception $e) {
+        } catch (BaseBreadcrumbException $e) {
             $this->logger->debug($e->getMessage());
 
             return null;

@@ -7,7 +7,7 @@ namespace Awaresoft\BreadcrumbBundle\Exception;
  *
  * @author Bartosz Malec <b.malec@awaresoft.pl>
  */
-class ContextNotAvailableException extends \Exception
+class ContextNotAvailableException extends BaseBreadcrumbException
 {
     const MESSAGE = 'Context %s is not available.';
 

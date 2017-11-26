@@ -7,7 +7,7 @@ namespace Awaresoft\BreadcrumbBundle\Exception;
  *
  * @author Bartosz Malec <b.malec@awaresoft.pl>
  */
-class WrongPositionException extends \Exception
+class WrongPositionException extends BaseBreadcrumbException
 {
     const MESSAGE = 'Position %s is not acceptable for this block';
 
