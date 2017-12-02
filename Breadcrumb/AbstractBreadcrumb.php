@@ -171,12 +171,14 @@ abstract class AbstractBreadcrumb implements BreadcrumbInterface
         $baseUrl = $this->request->getBaseUrl();
         $breadcrumbs = $this->prepareParentBreadcrumbs($page);
 
-        $item = new BreadcrumbItem();
-        $item->setName($this->cmsPage->getName());
-        $item->setUrl($baseUrl . $this->cmsPage->getUrl());
-        $item->setActive($isLastActive);
+        if ($this->cmsPage) {
+            $item = new BreadcrumbItem();
+            $item->setName($this->cmsPage->getName());
+            $item->setUrl($baseUrl . $this->cmsPage->getUrl());
+            $item->setActive($isLastActive);
 
-        $breadcrumbs[] = $item;
+            $breadcrumbs[] = $item;
+        }
 
         return $breadcrumbs;
     }
