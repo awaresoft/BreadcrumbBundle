@@ -233,7 +233,7 @@ class BreadcrumbBlock extends MenuBlockService
     {
         $extendedRequestParams = $blockContext->getBlock()->getSetting('request');
 
-        if (count($extendedRequestParams) > 0) {
+        if ($extendedRequestParams && count($extendedRequestParams) > 0) {
             foreach ($extendedRequestParams as $key => $param) {
                 $this->request->attributes->set($key, $param);
             }
