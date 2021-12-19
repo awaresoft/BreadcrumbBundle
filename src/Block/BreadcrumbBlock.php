@@ -8,10 +8,12 @@ use Awaresoft\BreadcrumbBundle\Exception\BaseBreadcrumbException;
 use Awaresoft\BreadcrumbBundle\Exception\WrongPositionException;
 use Awaresoft\Sonata\PageBundle\Entity\PageRepository;
 use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\EntityManagerInterface;
 use Knp\Menu\MenuItem;
 use Psr\Log\LoggerInterface;
+use Sonata\PageBundle\CmsManager\CmsManagerSelectorInterface;
 use Sonata\PageBundle\Model\PageInterface;
-use Symfony\Bundle\FrameworkBundle\Templating\EngineInterface;
+use Sonata\PageBundle\Site\SiteSelectorInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Sonata\BlockBundle\Block\BlockContextInterface;
@@ -21,7 +23,10 @@ use Knp\Menu\Provider\MenuProviderInterface;
 use Knp\Menu\FactoryInterface;
 use Awaresoft\BreadcrumbBundle\Exception\ContextNotAvailableException;
 use Awaresoft\BreadcrumbBundle\Exception\ContextNotFoundException;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Templating\EngineInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Class BreadcrumbBlockService
@@ -75,21 +80,50 @@ class BreadcrumbBlock extends MenuBlockService
     protected $cmsPage;
 
     /**
+     * @var PageInterface
+     */
+    protected $siteSelector;
+
+    /**
+     * @var TranslatorInterface
+     */
+    protected $translator;
+
+    /**
      * @param string $name
      * @param EngineInterface $templating
      * @param MenuProviderInterface $menuProvider
      * @param FactoryInterface $factory
      * @param ContainerInterface $container
+     * @param LoggerInterface $logger ,
+     * @param RequestStack $requestStack ,
+     * @param EntityManagerInterface $entityManager ,
+     * @param CmsManagerSelectorInterface $cmsManagerSelector
+     * @param SiteSelectorInterface $siteSelector
+     * @param TranslatorInterface $translator
      */
-    public function __construct($name, EngineInterface $templating, MenuProviderInterface $menuProvider, FactoryInterface $factory, ContainerInterface $container)
-    {
+    public function __construct(
+        $name,
+        EngineInterface $templating,
+        MenuProviderInterface $menuProvider,
+        FactoryInterface $factory,
+        ContainerInterface $container,
+        LoggerInterface $logger,
+        RequestStack $requestStack,
+        EntityManagerInterface $entityManager,
+        CmsManagerSelectorInterface $cmsManagerSelector,
+        SiteSelectorInterface $siteSelector,
+        TranslatorInterface $translator
+    ) {
         $this->container = $container;
-        $this->em = $this->container->get('doctrine.orm.entity_manager');
-        $this->logger = $container->get('logger');
-        $this->request = $container->get('request_stack')->getCurrentRequest();
+        $this->em = $entityManager;
+        $this->logger = $logger;
+        $this->request = $requestStack->getCurrentRequest();
         $this->factory = $factory;
         $this->context = null;
-        $this->cmsPage = $this->container->get('sonata.page.cms_manager_selector')->retrieve()->getCurrentPage();
+        $this->cmsPage = $cmsManagerSelector->retrieve()->getCurrentPage();
+        $this->siteSelector = $siteSelector;
+        $this->translator = $translator;
 
         parent::__construct($name, $templating, $menuProvider, self::MENUS);
     }
@@ -190,9 +224,7 @@ class BreadcrumbBlock extends MenuBlockService
         $baseUrl = sprintf(
             '%s%s',
             $this->request->getBaseUrl(),
-            $this->container->get('sonata.page.site.selector')
-                ->getRequestContext()
-                ->getBaseUrl()
+            $this->siteSelector->getRequestContext()->getBaseUrl()
         );
 
         if (!$baseUrl) {
@@ -216,7 +248,7 @@ class BreadcrumbBlock extends MenuBlockService
 
         if ($settings['include_homepage_link']) {
             $menu->addChild(
-                $this->container->get('translator')->trans('breadcrumb.homepage'),
+                $this->translator->trans('breadcrumb.homepage'),
                 ['uri' => $baseUrl]
             );
         }
